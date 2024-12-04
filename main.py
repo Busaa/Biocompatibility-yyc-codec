@@ -5,8 +5,8 @@ Arthur Busanello UFRGS 2024
 """
 # Configure paths
 import sys
-sys.path.insert(0, "/home/busa/PROJETOS/DNA-STORAGE/codec")
-sys.path.insert(0, "/home/busa/PROJETOS/DNA-STORAGE")
+sys.path.insert(0, "/home/busa/projetos/Biocompatibility-yyc-codec-main/codec")
+sys.path.insert(0, "/home/busa/projetos/Biocompatibility-yyc-codec-main")
 
 # Calling the libraries and functions that we will be using
 import os
@@ -16,32 +16,38 @@ import math
 from yyc import pipeline
 from yyc import scheme
 from busa_utils.inputs import create_directories, check_input_files, setup_YYC, archive_binary_parting
-from busa_utils.outputs import save_outputs
+from busa_utils.outputs import encode_files_in_directory, decode_files_in_directory
 from busa_utils.log import setup_logging
+
 
 # Defining the variables, parameters, and paths
 ## Inputs archives
 input_file = "busa_inputs/texto.txt"  # Example input text file
 parts_files_path = "busa_inputs/binary_parts" # Example parts of the input file after binary division
 genome_path = "busa_inputs/Bsub-Cohn-genome.fasta"  # Genome file for nullomer analysis
+parts_size = 1000  # Size of the parts to be generated from the input file
 ## Encoding variables
-output_directory = "busa_outputs/"
-dna_parts_path = os.path.join(output_directory, "dna_parts")
+output_directory = "busa_outputs"
+dna_parts_dir = "busa_outputs/dna_parts"  # Path to save the DNA parts generated in the encoding process
+models_dir = "busa_outputs/models"  # Path to save the models used in the encoding process
 segment_length = 120 # Length of the segments of DNA for encoding (incorporation process)
 gc_content_range = (30, 70)  # Minimum and maximum GC content for sequences
+primer_5 = "GCTTCTGCTTGTCGTCG"  # 5' primer for the encoding process
+primer_3 = "GCTTCTGCTTGTCGTCG"  # 3' primer for the encoding process
 ## Decoding variables
-decoded_output_file = os.path.join(output_directory, "decoded_output.txt")
+decoded_output_dir = "busa_outputs/decoded_output"  # Path to save the decoded output files
 ## Output logs variables
 log_file = "log.md"
-log_level = logging.INFO # Set to logging.DEBUG for more detailed logs, logging.INFO for less
+log_dir = "busa_outputs/logs"  # Directory to save logs
+log_level = logging.DEBUG # Set to logging.DEBUG for more detailed logs, logging.INFO for less
 
 # CODE
 
 # Create necessary directories
-create_directories([output_directory, os.path.join(output_directory, "logs"),parts_files_path, dna_parts_path])
+create_directories([output_directory,parts_files_path, dna_parts_dir, log_dir, models_dir, decoded_output_dir])
 
 #  Setup logging
-logger = setup_logging(log_level=log_level, log_file=output_directory+"logs"+log_file)
+logger = setup_logging(log_level=log_level, log_file=os.path.join(log_dir, log_file))
 logger.info("0.0 Initializations ...")
 
 #  Check input files
@@ -50,7 +56,7 @@ if not check_input_files([input_file, genome_path], logger):
     exit(1)
 
 # Parting the input file
-archive_binary_parting(input_file, parts_path=parts_files_path, part_size=1200, logger=logger)
+archive_binary_parting(input_file, parts_path=parts_files_path, part_size=parts_size, logger=logger)
 
 # Creating the encoding scheme
 logger.info(" Initializing the YYC scheme ...")
@@ -71,46 +77,43 @@ tool = setup_YYC(
     min_free_energy=None # min free energy of the DNA sequence in encoding
 )
 
-
 # Perform encoding
-for part in sorted(os.listdir(parts_files_path)):  # Sorting to ensure parts are processed in order
-    input_codec = os.path.join(parts_files_path, part)
-
-    # Check if the item is a file (not a directory)
-    if os.path.isfile(input_codec):
-        logger.info("Starting the encoding process for part: {}...".format(part))
-
-        # Construct output path for the encoded file
-        encoded_output_path = os.path.join(dna_parts_path, "{}_encoded".format(part))
-
-        # Perform encoding
-        encoded_sequences = pipeline.encode(
-            method=tool, 
-            input_path=input_codec, 
-            output_path=encoded_output_path,
-            model_path=None, 
-            verify=None, 
-            need_index=True, 
-            segment_length=120, 
-            need_log=False
-        )
-
-        logger.info("Encoding completed successfully for part: {}.".format(part))
-    else:
-        logger.warning("Skipping non-file item in parts directory:{}".format(part))
-
-"""
-# 5. Perform decoding (if applicable)
-logger.info("Starting the decoding process...")
-pipeline.decode(
-    method=None, 
-    model_path=None, 
-    input_path=None, 
-    output_path=None,
+logger.info("Starting the encoding process...")
+encode_files_in_directory(
+    input_dir=parts_files_path, 
+    output_dir=dna_parts_dir, 
+    model_dir=models_dir, 
+    pipeline=pipeline, 
+    tool=tool, 
+    segment_length=120, 
+    need_index=True, 
+    need_log=False,
     verify=None, 
-    has_index=True, 
-    need_log=False
+    logger=logger
+)
+logger.info("Encoding completed successfully.")
+
+
+# Perfoming test for decoding
+logger.info("Starting the decoding process...")
+decode_files_in_directory(
+    dna_parts_dir=dna_parts_dir, 
+    model_dir=models_dir, 
+    output_dir=decoded_output_dir, 
+    pipeline=pipeline, 
+    tool=tool, 
+    logger=logger
 )
 logger.info("Decoding completed successfully.")
 
-"""
+# Uniting the decoded files in one and comparing to the original input file
+logger.info("Comparing the original input file with the decoded output file...")
+decoded_files = os.listdir(decoded_output_dir)
+decoded_files.sort()
+decoded_data = ""
+for file in decoded_files:
+    decoded_data += open(os.path.join(decoded_output_dir, file), "r").read()
+original_data = open(input_file, "r").read()
+if decoded_data == original_data:
+    logger.info("The original input file and the decoded output file are the same.")
+    print("The original input file and the decoded output file are the same.")
