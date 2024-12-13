@@ -3,6 +3,10 @@ This is part of my undergraduate research project on a DNA storage model in Baci
 
 ### Last Commit Resume
 
+13.12.24
+-> Implemented a change in the Validation logic. Now the is thinking in veryfing Palindromes in dsDNA instead of thinking about the secondery structures formed by RNA/DNA fold.
+-> More easty for me to understand comments in the code
+-> NEED TO FIX DECODIFICATION AND IMPLEMENT A WORKING COMPARISION OF BITS FROM OG FILE AND DECODED FILE, ALSO THE CSV WITH THE NUCLEOTIDES AND CORRESPONDING DATA
 
 ## What to do Next
 -> Enconding Log and Segments of DNA csv table
