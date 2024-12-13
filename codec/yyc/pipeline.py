@@ -46,6 +46,8 @@ def encode(method, input_path, output_path,
     :param need_log: Show the log.
     """
 
+
+
     if input_path is None or len(input_path) == 0:
         log.output(log.ERROR, str(__name__), str(sys._getframe().f_code.co_name),
                    "The input file path is invalid!")
@@ -59,13 +61,16 @@ def encode(method, input_path, output_path,
     if need_index:
         input_matrix = index_operator.connect_all(input_matrix, need_log)
 
+    """
     if verify is not None:
         input_matrix = verify.add_for_matrix(input_matrix, need_log)
-
+    """
+    
     dna_sequences = method.encode(input_matrix, size, need_log)
 
     if model_path is not None:
         model_saver.save_model(model_path, {"method": method, "verify": verify})
+    
 
     data_handle.write_dna_file(output_path, dna_sequences, need_log)
 

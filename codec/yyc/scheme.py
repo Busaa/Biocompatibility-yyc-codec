@@ -36,7 +36,7 @@ index_base = {0: "A", 1: "C", 2: "G", 3: "T"}
 class YYC:
     def __init__(
         self,
-        base_reference=None,
+        base_reference=None, 
         current_code_matrix=None,
         support_bases=None,
         support_spacing=0,
@@ -303,13 +303,15 @@ class YYC:
                        "YYC did not receive matrix data!")
 
         total_count = len(good_data_set) + len(bad_data_set)
+        log.output(log.NORMAL, str(__name__), str(sys._getframe().f_code.co_name),
+                   "total count of good and bad data: " + str(total_count))
 
-        index_bit_length = int(len(str(bin(total_count))) - 2)
+        index_bit_length = int(len(str(bin(total_count))) - 2) #-2 removes the '0b' prefix from the binary string
 
-        search_counts = [0 for _ in range(self.search_count + 1)]
+        search_counts = [0 for _ in range(self.search_count + 1)] #serach count for best encoding possibility in the incporporation process
         additional = 0
         while len(good_data_set) + len(bad_data_set) > 0:
-            if len(good_data_set) > 0 and len(bad_data_set) > 0:
+            if len(good_data_set) > 0 and len(bad_data_set) > 0: # if both have data
                 fixed_list = random.sample(bad_data_set, 1)[0]
                 bad_data_set.remove(fixed_list)
                 another_list, is_upper, search_count = self._searching_results(fixed_list, good_data_set,
@@ -472,39 +474,45 @@ class YYC:
 
         dna_sequence = []
 
-        if len(upper_list) == len(lower_list):
+        if len(upper_list) == len(lower_list): #if sequences same length
             for index, (upper_bit, lower_bit) in enumerate(zip(upper_list, lower_list)):
-                if index > self.support_spacing:
-                    support_base = dna_sequence[index - (self.support_spacing + 1)]
+                if index > self.support_spacing: #if index is bigger than support spacing
+                    support_base = dna_sequence[index - (self.support_spacing + 1)] #get the first(s) support base, depending on the spacing
                 else:
-                    support_base = self.support_bases[index]
+                    support_base = self.support_bases[index] #else, get the support base from the support base list, previous base
 
-                dna_sequence.append(self._binary_to_base(upper_bit, lower_bit, support_base))
+                dna_sequence.append(self._binary_to_base(upper_bit, lower_bit, support_base)) #get the base from the binary
 
             return dna_sequence, None
 
-        addition_length = abs(len(upper_list) - len(lower_list))
-
-        if len(upper_list) > len(lower_list):
-            flag = -1
+        addition_length = abs(len(upper_list) - len(lower_list)) #get the difference between the two lists
+        log.output(log.WARN, str(__name__), str(sys._getframe().f_code.co_name),
+                     "The length of upper and lower list is not equal, the difference is " + str(addition_length))
+        
+        if len(upper_list) > len(lower_list): #if upper(good) list is longer
+            flag = -1 #upper list is longer
             re_upper_list = copy.deepcopy(upper_list)
-            re_lower_list = copy.deepcopy(lower_list + [-1 for _ in range(addition_length)])
-        else:
-            flag = 1
-            re_upper_list = copy.deepcopy(upper_list + [-1 for _ in range(addition_length)])
+            re_lower_list = copy.deepcopy(lower_list + [-1 for _ in range(addition_length)]) #add -1 (empty bit) to the lower list to make them same length
+            log.output(log.WARN, str(__name__), str(sys._getframe().f_code.co_name),
+                     "The upper list is longer, the lower list will be padded with -1 in this quantity"+ str(addition_length))
+        else: #if lower(bad) list is longer
+            flag = 1 #lower list is longer
+            re_upper_list = copy.deepcopy(upper_list + [-1 for _ in range(addition_length)]) #same here, add -1 (empty bit) to the upper list to make them same length
+            log.output(log.WARN, str(__name__), str(sys._getframe().f_code.co_name),
+                     "The lower list is longer, the upper list will be padded with -1 in this quantity"+ str(addition_length))
             re_lower_list = copy.deepcopy(lower_list)
 
         for index, (upper_bit, lower_bit) in enumerate(zip(re_upper_list, re_lower_list)):
-            if index > self.support_spacing:
-                support_base = dna_sequence[index - (self.support_spacing + 1)]
+            if index > self.support_spacing: #if index is bigger than support spacing
+                support_base = dna_sequence[index - (self.support_spacing + 1)] #get the first(s) support base, depending on the spacing
             else:
-                support_base = self.support_bases[index]
+                support_base = self.support_bases[index] #else, get the support base from the support base list, previous base
 
-            if upper_bit != -1 and lower_bit != -1:
-                dna_sequence.append(self._binary_to_base(upper_bit, lower_bit, support_base))
-            elif upper_bit == -1:
-                is_chosen = False
-                for chosen_bit in [0, 1]:
+            if upper_bit != -1 and lower_bit != -1: #if both bits are valid, aka NOT -1(empty bits)
+                dna_sequence.append(self._binary_to_base(upper_bit, lower_bit, support_base))#converts the bits to base
+            elif upper_bit == -1: #if upper bit is invalid, empty
+                is_chosen = False #flag
+                for chosen_bit in [0, 1]: #test both bits possibilities in their validity according to the rules
                     current_base = self._binary_to_base(chosen_bit, lower_bit, support_base)
                     if validity.check("".join(dna_sequence) + current_base,
                                       max_homopolymer=self.max_homopolymer,
@@ -512,13 +520,13 @@ class YYC:
                                       min_free_energy=self.min_free_energy):
                         re_upper_list[index] = chosen_bit
                         dna_sequence.append(current_base)
-                        is_chosen = True
+                        is_chosen = True # pass the validity test
                         break
-                if not is_chosen:
-                    return None, re_upper_list
-            else:
+                if not is_chosen: # does not pass the validity test
+                    return None, re_upper_list # return None and the upper list with the empty bit
+            else: #if lower bit is empty
                 is_chosen = False
-                for chosen_bit in [0, 1]:
+                for chosen_bit in [0, 1]: #test both bits possibilities in their validity according to the rules
                     current_base = self._binary_to_base(upper_bit, chosen_bit, support_base)
                     if validity.check("".join(dna_sequence) + current_base,
                                       max_homopolymer=self.max_homopolymer,
@@ -526,15 +534,15 @@ class YYC:
                                       min_free_energy=self.min_free_energy):
                         re_lower_list[index] = chosen_bit
                         dna_sequence.append(current_base)
-                        is_chosen = True
+                        is_chosen = True # pass the validity test
                         break
-                if not is_chosen:
-                    return None, re_lower_list
+                if not is_chosen: # does not pass the validity test
+                    return None, re_lower_list # return None and the lower list with the empty bit
 
-        if flag == 1:
-            return dna_sequence, re_upper_list
+        if flag == 1: #if lower list is longer
+            return dna_sequence, re_upper_list #return the dna sequence and the upper list with the empty bit
         else:
-            return dna_sequence, re_lower_list
+            return dna_sequence, re_lower_list #return the dna sequence and the lower list with the empty bit
 
     def _binary_to_base(self, upper_bit, lower_bit, support_base):
         """
@@ -553,11 +561,11 @@ class YYC:
         """
 
         current_options = []
-        for index in range(len(self.base_reference)):
+        for index in range(len(self.base_reference)): # YANG RULE
             if self.base_reference[index] == int(upper_bit):
                 current_options.append(index)
 
-        if self.current_code_matrix[base_index[support_base]][current_options[0]] == int(lower_bit):
+        if self.current_code_matrix[base_index[support_base]][current_options[0]] == int(lower_bit): #YING RULE
             one_base = index_base[current_options[0]]
         else:
             one_base = index_base[current_options[1]]

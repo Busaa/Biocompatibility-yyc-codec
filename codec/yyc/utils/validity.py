@@ -28,7 +28,7 @@ def check(sequence, max_homopolymer=math.inf, max_content=1, min_free_energy=Non
         return False
     if not cg_content(sequence, max_content):
         return False
-    if not fold(sequence, min_free_energy):
+    if  is_palindrome(sequence): #check if the sequence is a palindrome modified by Busaa 2024
         return False
 
     return True
@@ -47,10 +47,10 @@ def homopolymer(sequence, max_homopolymer):
         return True
 
     missing_segments = ["A" * (1 + max_homopolymer), "C" * (1 + max_homopolymer), "G" * (1 + max_homopolymer),
-                        "T" * (1 + max_homopolymer)]
+                        "T" * (1 + max_homopolymer)] # creates a list of all possible homopolymers in DNA sequence
 
     for missing_segment in missing_segments:
-        if missing_segment in "".join(sequence):
+        if missing_segment in "".join(sequence): # checks if any of the homopolymers are in the DNA sequence 
             return False
     return True
 
@@ -90,3 +90,29 @@ def fold(motif, min_free_energy):
                 return True
 
     return False
+
+## Modifications made to the original code:
+### by Busaa 2024
+def generate_complement_strand(sequence):
+	""" 
+	Generate the complementary DNA strand for a given sequence. 
+	:param sequence: DNA sequence being codified by the YYC (5' -> 3'). 
+	:return: Complementary sequence (3' -> 5'). 
+	""" 
+
+	complement_map = {
+        "A": "T", 
+        "T": "A", 
+        "C": "G", 
+        "G": "C"
+    } 
+	return "".join(complement_map[base] for base in sequence)
+
+def is_palindrome(sequence):
+    """ 
+    Check if a given DNA sequence is a palindrome. 
+    :param sequence: DNA sequence being codified by the YYC (5' -> 3'). 
+    :return: Whether the DNA sequence is a palindrome. 
+    """ 
+
+    return sequence == generate_complement_strand(sequence)[::-1] #invert the complementary sequence and check if it is equal to the original sequence

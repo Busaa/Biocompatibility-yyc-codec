@@ -25,7 +25,7 @@ from busa_utils.log import setup_logging
 input_file = "busa_inputs/texto.txt"  # Example input text file
 parts_files_path = "busa_inputs/binary_parts" # Example parts of the input file after binary division
 genome_path = "busa_inputs/Bsub-Cohn-genome.fasta"  # Genome file for nullomer analysis
-parts_size = 1000  # Size of the parts to be generated from the input file
+parts_size = 5000  # Size of the parts to be generated from the input file
 ## Encoding variables
 output_directory = "busa_outputs"
 dna_parts_dir = "busa_outputs/dna_parts"  # Path to save the DNA parts generated in the encoding process
@@ -39,7 +39,7 @@ decoded_output_dir = "busa_outputs/decoded_output"  # Path to save the decoded o
 ## Output logs variables
 log_file = "log.md"
 log_dir = "busa_outputs/logs"  # Directory to save logs
-log_level = logging.DEBUG # Set to logging.DEBUG for more detailed logs, logging.INFO for less
+log_level = logging.INFO # Set to logging.DEBUG for more detailed logs, logging.INFO for less
 
 # CODE
 
@@ -106,14 +106,39 @@ decode_files_in_directory(
 )
 logger.info("Decoding completed successfully.")
 
-# Uniting the decoded files in one and comparing to the original input file
-logger.info("Comparing the original input file with the decoded output file...")
-decoded_files = os.listdir(decoded_output_dir)
-decoded_files.sort()
-decoded_data = ""
-for file in decoded_files:
-    decoded_data += open(os.path.join(decoded_output_dir, file), "r").read()
-original_data = open(input_file, "r").read()
-if decoded_data == original_data:
-    logger.info("The original input file and the decoded output file are the same.")
-    print("The original input file and the decoded output file are the same.")
+# Unindo os arquivos decodificados em um único arquivo sem duplicação
+logger.info("Unindo os arquivos decodificados e salvando no arquivo 'decoded_info.txt'...")
+
+# Caminho para o arquivo combinado
+decoded_file_path = os.path.join(output_directory, "decoded_info.txt")
+
+# Lê e combina os arquivos decodificados em ordem e salva em 'decoded_info.txt'
+with open(decoded_file_path, "w") as decoded_file:
+    for file in sorted(os.listdir(decoded_output_dir)):
+        file_path = os.path.join(decoded_output_dir, file)
+        if os.path.isfile(file_path):  # Garante que apenas arquivos sejam processados
+            with open(file_path, "r") as f:
+                data = f.read()
+                decoded_file.write(data + "\n")  # Adiciona quebra de linha para separar conteúdos
+
+logger.info("Arquivos decodificados foram combinados e salvos em '{}'.".format(decoded_file_path))
+print("Arquivos decodificados foram combinados e salvos em '{}'.".format(decoded_file_path))
+
+# Comparando o arquivo combinado com o original
+with open(input_file, "r") as f:
+    original_data = f.read()
+
+with open(decoded_file_path, "r") as f:
+    decoded_data = f.read()
+
+# Comparando os dados originais com os decodificados
+similarity = sum(1 for a, b in zip(decoded_data, original_data) if a == b) / max(len(decoded_data), len(original_data)) * 100
+
+if similarity == 100:
+    logger.info("Os arquivos original e decodificado são idênticos (100% de similaridade).")
+    print("Os arquivos original e decodificado são idênticos (100% de similaridade).")
+else:
+    logger.info("Os arquivos original e decodificado têm {:.2f}% de similaridade.".format(similarity))
+    print("Os arquivos original e decodificado têm {:.2f}% de similaridade.".format(similarity))
+
+
