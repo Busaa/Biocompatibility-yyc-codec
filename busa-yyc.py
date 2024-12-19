@@ -100,8 +100,7 @@ if __name__ == "__main__":
             model_path=model_path,  # salva o modelo de codificação o arquivo .pkl
             need_index=True,  # indexação nas sequências para facilitar a decodificação
             segment_length=segment_length,  # tamanho do segmento de DNA
-            need_log=False,  # mostra o log do processo
-            genome_path=None  # caminho para o genoma para procurar nullômeros
+            need_log=False  # mostra o log do processo
         )
 
         with open(dna_output_path, "r") as dna_file:

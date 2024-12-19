@@ -30,6 +30,8 @@ def check(sequence, max_homopolymer=math.inf, max_content=1, min_free_energy=Non
         return False
     if  is_palindrome(sequence): #check if the sequence is a palindrome modified by Busaa 2024
         return False
+    if is_nullomer(sequence, "busa_inputs/genome.fasta")==False: #check if the sequence is a nullomer modified by Busaa 2024
+        return False
 
     return True
 
@@ -116,3 +118,20 @@ def is_palindrome(sequence):
     """ 
 
     return sequence == generate_complement_strand(sequence)[::-1] #invert the complementary sequence and check if it is equal to the original sequence
+
+def is_nullomer(sequence_codec, sequence_ref_path):
+    """
+    Check if the sequence is a nullomer, i.e., not found in the reference FASTA sequence.
+
+    :param sequence_codec: DNA sequence being codified by the YYC (5' -> 3').
+    :param sequence_ref_path: Path to the reference FASTA file.
+    :return: True if the sequence is a nullomer (not present in the reference), False otherwise.
+    """
+    with open(sequence_ref_path, "r") as ref_file:
+        ref_lines = ref_file.readlines()
+
+    # Concatenate all sequence lines while ignoring headers (lines starting with '>')
+    ref_sequence = "".join(line.strip() for line in ref_lines if not line.startswith(">"))
+
+    # Check if the sequence is absent in the reference
+    return sequence_codec not in ref_sequence

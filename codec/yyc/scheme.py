@@ -309,27 +309,27 @@ class YYC:
         index_bit_length = int(len(str(bin(total_count))) - 2) #-2 removes the '0b' prefix from the binary string
 
         search_counts = [0 for _ in range(self.search_count + 1)] #serach count for best encoding possibility in the incporporation process
-        additional = 0
+        additional = 0 #random sequence flag counter
         while len(good_data_set) + len(bad_data_set) > 0:
-            if len(good_data_set) > 0 and len(bad_data_set) > 0: # if both have data
-                fixed_list = random.sample(bad_data_set, 1)[0]
+            if len(good_data_set) > 0 and len(bad_data_set) > 0: # if we data in both good and bad data sets
+                fixed_list = random.sample(bad_data_set, 1)[0] #fixed a random list from the bad data set
                 bad_data_set.remove(fixed_list)
-                another_list, is_upper, search_count = self._searching_results(fixed_list, good_data_set,
-                                                                               index_bit_length, total_count)
+                another_list, is_upper, search_count = self._searching_results(fixed_list, good_data_set, 
+                                                                               index_bit_length, total_count) #search for the best endoning bad+good list
                 if search_count >= 0:
                     good_data_set.remove(another_list)
                     search_counts[search_count] += 1
                 else:
-                    additional += 1
+                    additional += 1 #if the search count is not enough, generate random sequences
 
-                if is_upper:
+                if is_upper: #if the order is fixed first 
                     data_set.append(fixed_list)
                     data_set.append(another_list)
-                else:
+                else: #if the order is not fixed first
                     data_set.append(another_list)
                     data_set.append(fixed_list)
 
-            elif len(good_data_set) > 0:
+            elif len(good_data_set) > 0: #if we have only good data
                 fixed_list = random.sample(good_data_set, 1)[0]
                 good_data_set.remove(fixed_list)
                 another_list, is_upper, search_count = self._searching_results(fixed_list, good_data_set,
@@ -346,7 +346,7 @@ class YYC:
                     data_set.append(another_list)
                     data_set.append(fixed_list)
 
-            elif len(bad_data_set) > 0:
+            elif len(bad_data_set) > 0: #if we have only bad data
                 fixed_list = random.sample(bad_data_set, 1)[0]
                 bad_data_set.remove(fixed_list)
                 another_list, is_upper, search_count = self._searching_results(fixed_list, bad_data_set,
@@ -371,9 +371,9 @@ class YYC:
             if need_log:
                 self.monitor.output(total_count - (len(good_data_set) + len(bad_data_set)), total_count)
 
-        results = {}
-        for index, count in enumerate(search_counts):
-            results[index] = count
+        results = {} #search results
+        for index, count in enumerate(search_counts): #for each search count
+            results[index] = count #add the count to the results
 
         if need_log:
             log.output(log.NORMAL, str(__name__), str(sys._getframe().f_code.co_name),
@@ -384,27 +384,27 @@ class YYC:
 
         del good_data_set, bad_data_set
 
-        return data_set
+        return data_set #return the valed data set of pairs
 
     def _searching_results(self, fixed_list, other_lists, index_length, total_count):
         if len(other_lists) > 0:
             for search_index in range(self.search_count + 1):
-                another_list = random.sample(other_lists, 1)[0]
+                another_list = random.sample(other_lists, 1)[0]#randomly select a list from the other lists
 
-                n_dna, _ = self._list_to_sequence(fixed_list, another_list)
-                if validity.check("".join(n_dna),
+                n_dna, _ = self._list_to_sequence(fixed_list, another_list) #generate a DNA sequence from the two lists first order possible
+                if validity.check("".join(n_dna), #check the validity of the DNA sequence
                                   max_homopolymer=self.max_homopolymer,
                                   max_content=self.max_content,
                                   min_free_energy=self.min_free_energy):
-                    return another_list, True, search_index
+                    return another_list, True, search_index #return the list, True(oreder fixed first), and the search index if the DNA sequence is valid
 
-                c_dna, _ = self._list_to_sequence(another_list, fixed_list)
+                c_dna, _ = self._list_to_sequence(another_list, fixed_list) #generate a DNA sequence from the two lists second order possible
                 if validity.check("".join(c_dna),
                                   max_homopolymer=self.max_homopolymer,
                                   max_content=self.max_content,
                                   min_free_energy=self.min_free_energy):
-                    return another_list, False, search_index
-        while True:
+                    return another_list, False, search_index #return the list, False(order), and the search index if the DNA sequence is valid
+        while True: #if the search count is not enough, generate random sequences
             # generate random sequence directly
             # random_list = [random.randint(0, 1) for _ in range(len(fixed_list))]
             #
@@ -423,16 +423,16 @@ class YYC:
             #     return random_list, False, -1
 
             # insert at least 2 interval
-            random_index = random.randint(total_count + 3, math.pow(2, index_length) - 1)
-            index_list = list(map(int, list(str(bin(random_index))[2:].zfill(index_length))))
+            random_index = random.randint(total_count + 3, math.pow(2, index_length) - 1) #generate a random index
+            index_list = list(map(int, list(str(bin(random_index))[2:].zfill(index_length)))) #convert the index to binary and fill with 0s to fit index length
 
-            n_dna, random_list = self._list_to_sequence(fixed_list, index_list)
+            n_dna, random_list = self._list_to_sequence(fixed_list, index_list) #generate a DNA sequence from the two lists first order possible
             if n_dna is not None:
-                return random_list, True, -1
+                return random_list, True, -1 #return the list, True(order), and -1 (random generated) if the DNA sequence is valid
 
-            c_dna, random_list = self._list_to_sequence(index_list, fixed_list)
+            c_dna, random_list = self._list_to_sequence(index_list, fixed_list) #generate a DNA sequence from the two lists second order possible
             if c_dna is not None:
-                return random_list, False, -1
+                return random_list, False, -1 #return the list, False(order), and -1(random generated) if the DNA sequence is valid
 
     def _synthesis_sequences(self, data_set, need_log):
         """
@@ -448,11 +448,11 @@ class YYC:
         """
 
         dna_sequences = []
-        for row in range(0, len(data_set), 2):
+        for row in range(0, len(data_set), 2): #for each row pair of binary lists in the data set
             if need_log:
                 self.monitor.output(row + 2, len(data_set))
-            dna_sequence, _ = self._list_to_sequence(data_set[row], data_set[row + 1])
-            dna_sequences.append(dna_sequence)
+            dna_sequence, _ = self._list_to_sequence(data_set[row], data_set[row + 1]) #convert the row pair to a DNA sequence
+            dna_sequences.append(dna_sequence) #appends the encoded sequence to a list
 
         del data_set
 
